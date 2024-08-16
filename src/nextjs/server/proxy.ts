@@ -10,6 +10,7 @@ export async function proxyAuthActionToConvex(
   request: NextRequest,
   options: { convexUrl?: string },
 ) {
+  
   if (request.method !== "POST") {
     return new Response("Invalid method", { status: 405 });
   }
@@ -20,14 +21,20 @@ export async function proxyAuthActionToConvex(
   if (action !== "auth:signIn" && action !== "auth:signOut") {
     return new Response("Invalid action", { status: 400 });
   }
+  
   // The client has a dummy refreshToken, the real one is only
   // stored in cookies.
   if (action === "auth:signIn" && args.refreshToken !== undefined) {
     args.refreshToken = getRequestCookies().refreshToken;
   }
+
+  console.log("making a request", action, args, options?.convexUrl)
+  
   const untypedResult = await fetchAction(action, args, {
     url: options?.convexUrl,
   });
+
+  console.log('proxy done');
 
   if (action === "auth:signIn") {
     const result = untypedResult as SignInAction["_returnType"];
@@ -38,6 +45,7 @@ export async function proxyAuthActionToConvex(
       return response;
     } else if (result.tokens !== undefined) {
       const response = jsonResponse(result);
+      console.log('setting auth cookies');
       setAuthCookies(response, result.tokens);
       return response;
     }
